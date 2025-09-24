@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -10,6 +11,15 @@ async function bootstrap() {
   app.enableCors({
     origin: true,
     credentials: true,
+  });
+
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.RMQ,
+    options: {
+      urls: ['amqp://guest:guest@localhost:5672'],
+      queue: 'auth_queue',
+      queueOptions: { durable: false },
+    },
   });
 
   const config = new DocumentBuilder()
@@ -34,6 +44,8 @@ async function bootstrap() {
 
   // Global prefix
   app.setGlobalPrefix('api');
+
+  await app.startAllMicroservices();
 
   const port = process.env.PORT || 3001;
   await app.listen(port);
